@@ -27,8 +27,6 @@ package org.jvnet.hudson.plugins.platformlabeler;
 
 import net.robertcollins.lsb.Release;
 
-import jenkins.security.Roles;
-import org.jenkinsci.remoting.RoleSensitive;
 import org.jenkinsci.remoting.RoleChecker;
 import hudson.remoting.Callable;
 import java.io.IOException;
@@ -39,11 +37,9 @@ import java.util.HashSet;
 
 class PlatformDetailsTask implements Callable<HashSet<String>, IOException> {
 
-    /** Required abtract method definition; we need the permission to run on a slave
-     */
     @Override
     public void checkRoles(RoleChecker checker) throws SecurityException {
-        checker.check((RoleSensitive) this, Roles.SLAVE);
+        return;
     }
 
     /** Performs computation and returns the result, or throws some exception. */
@@ -51,6 +47,7 @@ class PlatformDetailsTask implements Callable<HashSet<String>, IOException> {
         String arch = System.getProperty("os.arch").toLowerCase();
         String name = System.getProperty("os.name").toLowerCase();
         String version = System.getProperty("os.version");
+        HashSet<String> result = new HashSet<String>();
         if (name.equals("solaris") || name.equals("SunOS")) {
             name = "solaris";
         } else if (name.startsWith("windows")) {
@@ -97,16 +94,17 @@ class PlatformDetailsTask implements Callable<HashSet<String>, IOException> {
                     // Server 2008 is based on 6.0.6001
                     version = "vista+2008";
                 } else if (version.startsWith("6.1")) {
-                    if ("x86".equals(arch)) {
-                        // 2008 R2 is 64-bit only.
-                        version = "7";
-                    } else {
-                        // TODO distinguish windows 7amd64 from 2008R2?
-                        version = "7+2008r2";
-                    }
+                    version = "7";
+                } else if (version.startsWith("6.2")) {
+                    version = "8";
+                } else if (version.startsWith("6.3")) {
+                    version = "8.1";
+                } else if (version.startsWith("10.0")) {
+                    version = "10";
                 }
             }
         } else if (name.startsWith("linux")) {
+            result.add("linux");
             String unknown_string = "unknown+check_lsb_release_installed";
             Release release = new Release();
             name = release.distributorId();
@@ -137,13 +135,8 @@ class PlatformDetailsTask implements Callable<HashSet<String>, IOException> {
         } else {
                 // Take the System.properties values verbatim.
         }
-        HashSet<String> result = new HashSet<String>();
-        result.add(arch);
-        result.add(name);
-        result.add(version);
-        result.add(arch + "-" + name);
-        result.add(name + "-" + version);
-        result.add(arch + "-" + name + "-" + version);
+        result.add(name.toLowerCase());
+        result.add(name.toLowerCase() + "-" + version);
         return result;
     }
 }
